@@ -1,0 +1,85 @@
+<!-- ref: https://github.com/dannyvai/plotly_websocket_example -->
+<html>
+
+<script src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
+<script>
+    ws = new WebSocket("ws://192.168.11.85:8866")
+    //ws = new WebSocket("ws://192.168.11.65:12345/send_graph")
+    var request_data_interval
+
+    var dps_x = [];
+    var dps_y = [];
+    var dps_z = [];
+    var dataLength = 20;
+    var chart
+
+    ws.onopen = function()
+    {
+        // Web Socket is connected, send data using send()
+        ws.send("Message to send");
+        chart = new CanvasJS.Chart("chartContainer", {
+            title :{ text: "Dynamic Data of 3G-Accelerometer" },
+            axisX: { title: "Sample"},
+            axisY: { title: "Value", includeZero: false },
+            data: [{
+                type: "spline",
+                name: "x",
+                showInLegend: true,
+                dataPoints: dps_x
+            }, {
+                type: "spline",
+                name: "y",
+                showInLegend: true,
+                dataPoints: dps_y
+            }, {
+                type: "spline",
+                name: "z",
+                showInLegend: true,
+                dataPoints: dps_z
+            }]
+        });
+        request_data_interval = window.setInterval(requestData, 50);
+
+    };
+		
+    ws.onmessage = function (evt) 
+    { 
+        var received_msg = evt.data;
+        //console.log(received_msg)
+        data = JSON.parse(evt.data);
+        //console.log(data)
+
+        dps_x.push({x: data.s, y:data.x})
+        dps_y.push({x: data.s, y:data.y})
+        dps_z.push({x: data.s, y:data.z})
+
+        if (dps_x.length > dataLength) {
+            dps_x.shift();
+            dps_y.shift();
+            dps_z.shift();
+        }
+
+        chart.render();
+
+
+    };
+		
+    ws.onclose = function()
+    { 
+      // websocket is closed.
+      window.clearInterval(request_data_interval)
+    };
+    
+    function requestData()
+    {
+        ws.send("get-data");
+    }
+
+
+</script>
+<body>
+<div id="chartContainer" style="height: 370px; max-width: 920px; margin: 0px auto;"></div>
+</body>
+</html>
+
